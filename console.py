@@ -114,54 +114,41 @@ class HBNBCommand(cmd.Cmd):
         pass
 
     def do_create(self, args):
-        """ Create an object of any class"""
-        args = args.split()
-
-        if not args or len(args) < 1:
-            print('** class name missing **')
+        """ Create an object of any class with parameters"""
+        args_list = args.split(" ")
+        if not args_list[0]:
+            print("** class name missing **")
             return
-        
-        name = args[0]
-        if name not in HBNBCommand.classes:
+        elif args_list[0] not in HBNBCommand.classes:
             print("** class doesn't exist **")
             return
+        new_instance = HBNBCommand.classes[args_list[0]]()
 
-        kwargs = {}
-        for arg in args[1:]:
-            arg_split = arg.split('=')
-            if len(arg_split) < 2:
+        """
+        split key_value in key and value and check if key has value
+        remove double quotes and replace spaces and quotes
+        """
+        for param in args_list[1:]:
+            key_value = param.split('=')
+            if len(key_value) != 2:
                 continue
-
-            key, val = arg_split
-            if val.startswith('"') and val.endswith('"'):
-                raw = val
-                val = val[1:-1]
-                flg = False
-                for i, c in enumerate(val):
-                    if c == '"' and val[i-1] != '\\':
-                        flg = True
-                        break
-                
-                if flg:
-                    continue
-                    
-                val.replace('_', ' ')
-            elif val.isnumeric():
-                val = int(val)
-            elif val.replace('.', '').isnumeric():
-                val = float(val)
+            key, value = key_value
+            if value.startswith('"') and value.endswith('"'):
+                value = value[1:-1]
+                value = value.replace('_', ' ').replace('\\"', '"')
             else:
-                continue
+                try:
+                    if '.' in value:
+                        value = float(value)
+                    else:
+                        value = int(value)
+                except ValueError:
+                    continue
+            setattr(new_instance, key, value)
 
-            kwargs[key] = val
-
-        new_instance = HBNBCommand.classes[name]()
-        for k, v in kwargs.items():
-            new_instance.__dict__[k] = v
-
-        storage.save()
-
+        new_instance.save()
         print(new_instance.id)
+        storage.save()
 
     def help_create(self):
         """ Help information for the create method """
@@ -243,12 +230,12 @@ class HBNBCommand(cmd.Cmd):
             if args not in HBNBCommand.classes:
                 print("** class doesn't exist **")
                 return
-            for k, v in storage._FileStorage__objects.items():
-                if k.split('.')[0] == args:
-                    print_list.append(str(v))
+            objects = storage.all(args)  # Use class name string directly
         else:
-            for k, v in storage._FileStorage__objects.items():
-                print_list.append(str(v))
+            objects = storage.all()
+
+        for obj in objects.values():
+            print_list.append(str(obj))
 
         print(print_list)
 
